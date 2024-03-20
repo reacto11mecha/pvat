@@ -1,46 +1,74 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
-import './App.css'
+import "./App.css";
 
 const usePageVisibility = () => {
   const [isPageVisible, setIsPageVisible] = useState(true);
 
   useEffect(() => {
-    const cbBlur = () =>
-      setIsPageVisible(false)
+    function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
+      callback: T,
+      delay: number,
+    ) {
+      let timer: ReturnType<typeof setTimeout>;
+      return (...args: Parameters<T>) => {
+        const p = new Promise<ReturnType<T> | Error>((resolve, reject) => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            try {
+              let output = callback(...args);
+              resolve(output);
+            } catch (err) {
+              if (err instanceof Error) {
+                reject(err);
+              }
+              reject(new Error(`An error has occurred:${err}`));
+            }
+          }, delay);
+        });
+        return p;
+      };
+    }
 
-    const cbFocus = () =>
-      setIsPageVisible(true)
+    const updater = debounce(
+      (current: boolean) => setIsPageVisible(current),
+      450,
+    );
 
-    window.addEventListener("blur", cbBlur)
-    window.addEventListener("focus", cbFocus)
+    const cbBlur = () => updater(false);
+    const cbFocus = () => updater(true);
+
+    window.addEventListener("blur", cbBlur);
+    window.addEventListener("focus", cbFocus);
 
     return () => {
-      window.removeEventListener("blur", cbBlur)
-      window.removeEventListener("focus", cbFocus)
-    }
-  }, [])
+      window.removeEventListener("blur", cbBlur);
+      window.removeEventListener("focus", cbFocus);
+    };
+  }, []);
 
-  return { isPageVisible }
-}
+  return { isPageVisible };
+};
 
 function App() {
-  const [results, setResults] = useState<string[]>([])
+  const [results, setResults] = useState<string[]>([]);
 
-  const { isPageVisible } = usePageVisibility()
+  const { isPageVisible } = usePageVisibility();
 
   useEffect(() => {
-    setResults(prev => [...prev, `Is visible? ${isPageVisible}`])
-  }, [isPageVisible])
+    setResults((prev) => [...prev, `Is visible? ${isPageVisible}`]);
+  }, [isPageVisible]);
 
   return (
     <div>
       <h1>Page visibility test</h1>
       <ul>
-        {results.map((res, idx) => <li key={idx}>{res}</li>)}
+        {results.map((res, idx) => (
+          <li key={idx}>{res}</li>
+        ))}
       </ul>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
